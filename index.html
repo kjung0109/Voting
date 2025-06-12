@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>인덱스 페이지 - 경기대 투표</title>
+    <link
+      rel="stylesheet"
+      href="https://bootswatch.com/5/sketchy/bootstrap.min.css"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+        body {
+            background-color: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 4rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.075);
+            text-align: center;
+        }
+        .container img {
+            display: block;
+            margin: 0 auto 1rem auto;
+            width: 300px;
+        }
+      .btn-outline-primary,
+      .btn-outline-danger,
+      .btn-outline-info,
+      .btn-outline-success {
+            margin-top: 10px;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="./js/userdata.js"></script>
+</head>
+<body>
+    <div class="container">
+        <img src="./images/logo.png" alt="Logo">
+        <!-- <h1 class="mb-4">목록</h1> -->
+        <button class="btn btn-outline-primary w-50" id="votePageButton">투표 페이지</button>
+        <button class="btn btn-outline-primary w-50" id="voteLogButton">투표 로그 페이지</button>
+        <button class="btn btn-outline-info w-50" id="resultsPageButton">결과 보기</button> <!-- 수정된 부분 -->
+        <button class="btn btn-outline-success w-50" id="addVoteButton" style="display: none;">투표 추가</button>
+        <button class="btn btn-outline-danger w-50" id="logoutButton">로그아웃</button>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            const loggedInUser = JSON.parse(sessionStorage.getItem("loggedInUser"));
+            if (!loggedInUser) {
+                alert("로그인 후 이용해주세요.");
+                window.location.href = "login.html";
+                return;
+            }
+
+            if (loggedInUser.studentId === "0000") { // Admin student ID is 0000
+                $("#addVoteButton").show();
+            }
+
+            $("#votePageButton").click(function () {
+                window.location.href = "vote.html";
+            });
+
+            $("#voteLogButton").click(function () {
+                window.location.href = "vote_log.html";
+            });
+
+            $("#resultsPageButton").click(function () { // 수정된 부분
+                window.location.href = "results.html";
+            });
+
+            $("#addVoteButton").click(function () {
+                window.location.href = "admin.html";
+            });
+
+            $("#logoutButton").click(function () {
+                sessionStorage.removeItem("loggedInUser");
+                window.location.href = "login.html";
+            });
+        });
+    </script>
+</body> 
+</html>

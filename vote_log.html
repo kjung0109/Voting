@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://bootswatch.com/5/sketchy/bootstrap.min.css">
+    <link rel="stylesheet" href="style.css">
+    <title>투표 로그 - 경기대 투표</title>
+
+    <style> 
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            margin-top: 30px;
+        }
+        .card {
+            margin-bottom: 10px;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="./js/web3.min.js"></script>
+    <script src="./js/abi.js"></script>
+    <script src="./js/userdata.js"></script> <!-- Include the userdata.js script -->
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center">Vote Log</h1>
+        <div class="vote-log-container">
+            <div id="voteLog" class="mt-4">
+                <!-- 투표 로그가 여기에 표시됩니다 -->
+            </div>
+        </div>
+        <button class="btn btn-success mt-3" onclick="window.location.href='index.html'">메인 페이지로 이동</button>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            const loggedInUser = JSON.parse(sessionStorage.getItem("loggedInUser"));
+            if (!loggedInUser) {
+                alert("로그인 후 이용해주세요.");
+                window.location.href = "login.html";
+                return;
+            }
+
+            if (typeof web3 !== "undefined") {
+                window.web3 = new Web3(window.ethereum);
+                const votingContract = new window.web3.eth.Contract(abiobj, contractAddress);
+
+                // Function to mask student ID
+                function maskStudentId(studentId) {
+                    return "******" + studentId.slice(-2);
+                }
+
+                async function loadVoteLog() {
+                    try {
+                        const sessionCount = await votingContract.methods.getSessionCount().call();
+                        const voteLog = $("#voteLog");
+
+                        for (let sessionIndex = 0; sessionIndex < sessionCount; sessionIndex++) {
+                            const session = await votingContract.methods.getSession(sessionIndex).call();
+                            const sessionName = session[0];
+                            const candidateCount = await votingContract.methods.getCandidateCount(sessionIndex).call();
+
+                            for (let candidateIndex = 0; candidateIndex < candidateCount; candidateIndex++) {
+                                const candidate = await votingContract.methods.getCandidate(sessionIndex, candidateIndex).call();
+
+                                const votedEvents = await votingContract.getPastEvents('Voted', {
+                                    filter: { sessionIndex: sessionIndex },
+                                    fromBlock: 0,
+                                    toBlock: 'latest'
+                                });
+
+                                votedEvents.forEach(event => {
+                                    const voterAddress = event.returnValues.voter;
+                                    const votedCandidateIndex = event.returnValues.candidateIndex;
+                                    const voteStatus = (votedCandidateIndex == candidateIndex) ? `투표 성공` : "투표 열람";
+
+                                    // Use the logged-in user's student ID
+                                    const studentId = loggedInUser.studentId;
+                                    const maskedStudentId = maskStudentId(studentId);
+
+                                    const voteLogItem = `
+                                        <div class="card">
+                                            <div class="card-body">
+                                                학번: ${maskedStudentId} - ${voteStatus}<br>
+                                                참여한 투표: ${sessionName}
+                                            </div>
+                                        </div>
+                                    `;
+                                    voteLog.append(voteLogItem);
+                                });
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Error loading vote log:", error);
+                        alert("투표 로그를 불러오는 중 오류가 발생했습니다.");
+                    }
+                }
+
+                loadVoteLog();
+            } else {
+                alert("web3를 찾을 수 없습니다. MetaMask를 설치해주세요.");
+            }
+        });
+    </script>
+</body>
+</html>

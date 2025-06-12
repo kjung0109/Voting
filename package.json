@@ -1,0 +1,14 @@
+{
+  "dependencies": {
+    "web3": "^4.9.0"
+  },
+  "scripts": {
+    "build": "webpack"
+  },
+  "name": "basic_capston",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}

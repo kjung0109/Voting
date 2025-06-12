@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원가입 - 경기대 투표</title>
+    <link
+      rel="stylesheet"
+      href="https://bootswatch.com/5/sketchy/bootstrap.min.css"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+        body {
+            background-color: #f8f9fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .signup-container {
+            background-color: #fff;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+        .signup-container img {
+            display: block;
+            margin: 0 auto 1rem auto;
+            width: 500px;
+        }
+        .signup-container .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .signup-container input.form-control, .signup-container label.form-label {
+            width: 50%; /* 원하는 너비로 설정 */
+            margin: 0 auto; /* 가운데 정렬 */
+            display: block; /* 가운데 정렬을 위해 block으로 변경 */
+            text-align: left; /* 텍스트 가운데 정렬 */
+        }
+        .signup-container label.form-label {
+            margin-bottom: 0.5rem; /* 레이블과 입력 필드 사이의 간격 조정 */
+        }
+        .signup-container .btn {
+            width: 50%; /* 원하는 너비로 설정 */
+            margin: 0 auto; /* 가운데 정렬 */
+            display: block; /* 가운데 정렬을 위해 block으로 변경 */
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="signup-container">
+        <img src="./images/logo.png" alt="Logo">
+        <!-- <h1 class="text-center mb-4">회원가입</h1> -->
+        <form id="signupForm">
+            <div class="mb-3">
+                <label for="signupStudentId" class="form-label">학번</label>
+                <input type="text" class="form-control" id="signupStudentId" required>
+            </div>
+            <div class="mb-3">
+                <label for="signupName" class="form-label">이름</label>
+                <input type="text" class="form-control" id="signupName" required>
+            </div>
+            <div class="mb-3">
+                <label for="signupPassword" class="form-label">비밀번호</label>
+                <input type="password" class="form-control" id="signupPassword" required>
+            </div>
+            <div class="mb-3">
+                <label for="signupConfirmPassword" class="form-label">비밀번호 확인</label>
+                <input type="password" class="form-control" id="signupConfirmPassword" required>
+            </div>
+            <button type="submit" class="btn btn-success">회원가입</button>
+            <button type="button" class="btn btn-secondary mt-2" id="loginPageButton">이미 회원이신가요? 로그인</button>
+        </form>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            $("#signupForm").submit(function (e) {
+                e.preventDefault();
+                const studentId = $("#signupStudentId").val();
+                const name = $("#signupName").val();
+                const password = $("#signupPassword").val();
+                const confirmPassword = $("#signupConfirmPassword").val();
+
+                if (password !== confirmPassword) {
+                    alert("비밀번호가 일치하지 않습니다.");
+                    return;
+                }
+
+                const newUser = { studentId, name, password, role: "user" };  // role 속성을 추가하여 일반 사용자로 지정
+
+                // 사용자 데이터를 sessionStorage에 저장
+                sessionStorage.setItem("newUser", JSON.stringify(newUser));
+                alert("회원가입이 완료되었습니다. 로그인 페이지로 이동합니다.");
+                window.location.href = "login.html";
+            });
+
+            $("#loginPageButton").click(function () {
+                window.location.href = "login.html";
+            });
+        });
+    </script>
+</body>
+</html>

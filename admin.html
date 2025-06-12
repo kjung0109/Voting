@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 페이지 - 경기대 투표</title>
+    <link rel="stylesheet" href="https://bootswatch.com/5/sketchy/bootstrap.min.css"/>
+    <link rel="stylesheet" href="style.css"/>
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <script src="./js/web3.min.js"></script>
+    <script src="./js/abi.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1 class="bd-title text-center" style="margin-top: 30px">Admin</h1>
+        <div class="box-body">
+            <h2 class="bd-title text-center" style="margin-top: 30px"></h2>
+            <form id="addSessionForm">
+                <div class="mb-2">
+                    <label for="sessionName" class="form-label">세션 이름</label>
+                    <input type="text" class="form-control" id="sessionName" required/>
+                </div>
+                <div class="mb-2">
+                    <label for="startDate" class="form-label">시작 날짜</label>
+                    <input type="datetime-local" class="form-control" id="startDate" required/>
+                </div>
+                <div class="mb-2">
+                    <label for="endDate" class="form-label">종료 날짜</label>
+                    <input type="datetime-local" class="form-control" id="endDate" required/>
+                </div>
+                <div class="text-center">
+                    <button type="submit" class="btn btn-outline-info">투표 세션 추가</button>
+                </div>
+            </form>
+            <h2 class="bd-title text-center" style="margin-top: 10px"></h2>
+            <form id="addCandidateForm">
+                <div class="mb-2">
+                    <label for="candidateName" class="form-label">후보자 이름</label>
+                    <input type="text" class="form-control" id="candidateName" required/>
+                </div>
+                <div class="mb-2">
+                    <label for="candidateStudentId" class="form-label">학번</label>
+                    <input type="text" class="form-control" id="candidateStudentId" required/>
+                </div>
+                <div class="mb-2">
+                    <label for="candidateDepartment" class="form-label">학과</label>
+                    <input type="text" class="form-control" id="candidateDepartment" required/>
+                </div>
+                <div class="mb-2">
+                    <label for="sessionIndex" class="form-label">세션 인덱스</label>
+                    <input type="number" class="form-control" id="sessionIndex" required/>
+                </div>
+                <div class="text-center">
+                    <button type="submit" class="btn btn-outline-info">후보자 추가</button>
+                </div>
+            </form>
+            <h2 class="bd-title text-center" style="margin-top: 30px"></h2>
+            <div class="vote-session-container">
+                <div id="sessionList" class="list-group">
+                    <!-- 투표 세션 목록이 여기에 표시됩니다 -->
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between mt-4">
+                <button onclick="window.location.href='index.html'" class="btn btn-success" style="margin-top: 20px">메인 페이지로 이동</button>
+                <button id="logoutBtn" class="btn btn-danger" style="margin-top: 20px">로그아웃</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            const loggedInUser = JSON.parse(sessionStorage.getItem("loggedInUser"));
+            if (!loggedInUser || loggedInUser.studentId !== "0000") { // Admin student ID is 0000
+                alert("관리자만 접근 가능합니다.");
+                window.location.href = "login.html";
+            }
+        
+            $("#logoutBtn").click(function () {
+                sessionStorage.removeItem("loggedInUser");
+                window.location.href = "login.html";
+            });
+        
+            $("#addSessionForm").submit(async function (e) {
+                e.preventDefault();
+                const sessionName = $("#sessionName").val();
+                const startDate = new Date($("#startDate").val()).getTime() / 1000; // Convert to Unix timestamp in seconds
+                const endDate = new Date($("#endDate").val()).getTime() / 1000; // Convert to Unix timestamp in seconds
+        
+                if (typeof web3 !== "undefined" && web3.currentProvider.isMetaMask) {
+                    const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+                    window.web3 = new Web3(window.ethereum);
+                    const votingContract = new window.web3.eth.Contract(abiobj, contractAddress);
+        
+                    try {
+                        await votingContract.methods.createVotingSession(sessionName, startDate, endDate).send({ from: accounts[0] });
+                        alert("투표 세션이 성공적으로 추가되었습니다.");
+                        loadSessions(); // Reload sessions after adding a new one
+                    } catch (error) {
+                        if (error.message.includes("User denied transaction signature")) {
+                            alert("사용자가 트랜잭션 서명을 거부했습니다.");
+                        } else {
+                            console.error("Error adding session:", error);
+                            alert("투표 세션 추가 중 오류가 발생했습니다.");
+                        }
+                    }
+                } else {
+                    alert("MetaMask를 사용할 수 없습니다.");
+                }
+            });
+        
+            $("#addCandidateForm").submit(async function (e) {
+                e.preventDefault();
+                const candidateName = $("#candidateName").val();
+                const candidateStudentId = $("#candidateStudentId").val();
+                const candidateDepartment = $("#candidateDepartment").val();
+                const sessionIndex = $("#sessionIndex").val();
+        
+                if (typeof web3 !== "undefined" && web3.currentProvider.isMetaMask) {
+                    const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+                    window.web3 = new Web3(window.ethereum);
+                    const votingContract = new window.web3.eth.Contract(abiobj, contractAddress);
+        
+                    try {
+                        await votingContract.methods.addCandidate(candidateName, candidateStudentId, candidateDepartment, sessionIndex).send({ from: accounts[0] });
+                        alert("후보자가 성공적으로 추가되었습니다.");
+                        loadSessions(); // Reload sessions after adding a new candidate
+                    } catch (error) {
+                        if (error.message.includes("User denied transaction signature")) {
+                            alert("사용자가 트랜잭션 서명을 거부했습니다.");
+                        } else {
+                            console.error("Error adding candidate:", error);
+                            alert("후보자 추가 중 오류가 발생했습니다.");
+                        }
+                    }
+                } else {
+                    alert("MetaMask를 사용할 수 없습니다.");
+                }
+            });
+        
+            async function loadSessions() {
+                const currentTime = Math.floor(Date.now() / 1000); // Get current time in seconds
+                if (typeof web3 !== "undefined" && web3.currentProvider.isMetaMask) {
+                    const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+                    window.web3 = new Web3(window.ethereum);
+                    const votingContract = new window.web3.eth.Contract(abiobj, contractAddress);
+        
+                    try {
+                        const sessionCount = await votingContract.methods.getSessionCount().call();
+                        const sessionList = $("#sessionList");
+                        sessionList.empty();
+        
+                        for (let i = 0; i < sessionCount; i++) {
+                            const session = await votingContract.methods.getSession(i).call();
+                            const sessionName = session[0];
+                            const isActive = session[1];
+                            const startTime = Number(session[2]); // Convert BigInt to Number
+                            const endTime = Number(session[3]); // Convert BigInt to Number
+                            
+                            const sessionStatus = (currentTime >= startTime && currentTime <= endTime) ? "Ongoing" : "Ended";
+                            const sessionItem = `<div class="list-group-item">Session ${i}: ${sessionName} (Status: ${sessionStatus}, Start: ${new Date(startTime * 1000).toLocaleString()}, End: ${new Date(endTime * 1000).toLocaleString()})</div>`;
+                            sessionList.append(sessionItem);
+                        }
+        
+                        $('.list-group-item').on('click', function () {
+                            $('.list-group-item').removeClass('active');
+                            $(this).addClass('active');
+                            selectedSession = $(this).data('session-index');
+                        });
+                    } catch (error) {
+                        console.error("Error loading sessions:", error);
+                        alert("투표 세션을 불러오는 중 오류가 발생했습니다.");
+                    }
+                } else {
+                    alert("MetaMask를 사용할 수 없습니다.");
+                }
+            }
+        
+            loadSessions();
+        });
+        
+    </script>
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>투표 결과 - 경기대 투표</title>
+    <link rel="stylesheet" href="https://bootswatch.com/5/sketchy/bootstrap.min.css"/>
+    <link rel="stylesheet" href="style.css"/>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="./js/web3.min.js"></script>
+    <script src="./js/abi.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .list-group-item {
+            cursor: pointer;
+        }
+        .list-group-item.active {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+            color: white;
+        }
+        #sessionList {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h2 class="text-center mt-4">Vote Result</h2>
+        <form id="selectSessionForm">
+            <div id="sessionList" class="list-group mb-4">
+                <!-- 세션 목록이 여기에 표시됩니다 -->
+            </div>
+            <div class="text-center">
+                <button type="submit" class="btn btn-outline-info">확인</button>
+            </div>
+        </form>
+        <canvas id="voteResultsChart"></canvas>
+        <div class="d-flex justify-content-between mt-4">
+            <button id="mainPageButton" class="btn btn-success">메인 페이지로 이동</button>
+            <button id="logoutBtn" class="btn btn-danger">로그아웃</button>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            const loggedInUser = JSON.parse(sessionStorage.getItem("loggedInUser"));
+            if (!loggedInUser) {
+                alert("로그인 후 이용해주세요.");
+                window.location.href = "login.html";
+                return;
+            }
+
+            let selectedSession = null;
+            let voteResultsChart;
+
+            $("#logoutBtn").click(function () {
+                sessionStorage.removeItem("loggedInUser");
+                window.location.href = "login.html";
+            });
+
+            $("#mainPageButton").click(function () {
+                window.location.href = "index.html";
+            });
+
+            async function loadSessions() {
+                const currentTime = Math.floor(Date.now() / 1000);
+                if (typeof web3 !== "undefined" && web3.currentProvider.isMetaMask) {
+                    const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+                    window.web3 = new Web3(window.ethereum);
+                    const votingContract = new window.web3.eth.Contract(abiobj, contractAddress);
+
+                    try {
+                        const sessionCount = await votingContract.methods.getSessionCount().call();
+                        const sessionList = $("#sessionList");
+                        sessionList.empty();
+
+                        for (let i = 0; i < sessionCount; i++) {
+                            const session = await votingContract.methods.getSession(i).call();
+                            const startTime = session[2];
+                            const endTime = session[3];
+
+                            const sessionItem = `<div class="list-group-item" data-session-index="${i}" data-start-time="${startTime}" data-end-time="${endTime}">${session[0]}</div>`;
+                            sessionList.append(sessionItem);
+                        }
+
+                        $('.list-group-item').on('click', function () {
+                            $('.list-group-item').removeClass('active');
+                            $(this).addClass('active');
+                            selectedSession = $(this).data('session-index');
+                        });
+                    } catch (error) {
+                        console.error("Error loading sessions:", error);
+                        alert("투표 세션을 불러오는 중 오류가 발생했습니다.");
+                    }
+                } else {
+                    alert("MetaMask를 사용할 수 없습니다.");
+                }
+            }
+
+            async function loadVotingResults(sessionIndex) {
+                const currentTime = Math.floor(Date.now() / 1000);
+                const sessionElement = $(`.list-group-item[data-session-index="${sessionIndex}"]`);
+                const startTime = parseInt(sessionElement.data('start-time'));
+                const endTime = parseInt(sessionElement.data('end-time'));
+
+                if (currentTime < endTime) {
+                    alert("투표 결과를 확인할 수 없는 기간입니다.");
+                    return;
+                }
+
+                if (typeof web3 !== "undefined" && web3.currentProvider.isMetaMask) {
+                    const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+                    window.web3 = new Web3(window.ethereum);
+                    const votingContract = new window.web3.eth.Contract(abiobj, contractAddress);
+
+                    try {
+                        const candidateCount = await votingContract.methods.getCandidateCount(sessionIndex).call();
+                        const candidateNames = [];
+                        const voteCounts = [];
+
+                        for (let i = 0; i < candidateCount; i++) {
+                            const candidate = await votingContract.methods.getCandidate(sessionIndex, i).call();
+                            candidateNames.push(candidate[0]);
+                            voteCounts.push(Number(candidate[3])); // Convert BigInt to Number
+                        }
+
+                        // Update chart
+                        if (voteResultsChart) {
+                            voteResultsChart.destroy();
+                        }
+
+                        const ctx = document.getElementById('voteResultsChart').getContext('2d');
+                        voteResultsChart = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: candidateNames,
+                                datasets: [{
+                                    label: 'Votes',
+                                    data: voteCounts,
+                                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                    borderColor: 'rgba(54, 162, 235, 1)',
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        ticks: {
+                                            callback: function(value) {
+                                                if (Number.isInteger(value)) {
+                                                    return value;
+                                                }
+                                            },
+                                            stepSize: 1  // Set step size to 1 for integer display
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    } catch (error) {
+                        console.error("Error loading voting results:", error);
+                        alert("투표 결과를 불러오는 중 오류가 발생했습니다.");
+                    }
+                } else {
+                    alert("MetaMask를 사용할 수 없습니다.");
+                }
+            }
+
+            $("#selectSessionForm").submit(function (e) {
+                e.preventDefault();
+                if (selectedSession !== null) {
+                    loadVotingResults(selectedSession);
+                } else {
+                    alert("세션을 선택해주세요.");
+                }
+            });
+
+            loadSessions();
+        });
+    </script>
+</body>
+</html>
